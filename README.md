@@ -56,3 +56,8 @@ In this task, I created different SQL reports using the Student Management Datab
 
 - MySQL Workbench
 - GitHub
+
+## How to Run
+1. Open DB Fiddle or MySQL Workbench / pgAdmin
+2. Copy and paste the full contents of `task4_reports.sql`
+3. Run each numbered report query independently to see results
