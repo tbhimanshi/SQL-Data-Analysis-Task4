@@ -1,3 +1,12 @@
+-- SQL Data Analysis Internship – Task 4
+-- Student Management Database
+-- Name - Himanshi Mahavar
+-- batch - 24th May 2026
+-- mail - mahavarhimanshi@gmail.com
+-- Date   : 23-06-2026
+
+--TASK 4 :
+
 USE StudentManagement;
 UPDATE Students
 SET
