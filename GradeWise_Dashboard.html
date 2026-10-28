@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GradeWise — Academic Analytics Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --ink:#16213E;
+  --ink-2:#212F52;
+  --paper:#F4F5F7;
+  --paper-card:#FFFFFF;
+  --brass:#B08D57;
+  --brass-dark:#8C6D3F;
+  --good:#3F7A5D;
+  --bad:#A13D3D;
+  --warn:#B08D57;
+  --line:#E2E4EA;
+  --muted:#5B6478;
+  --serif:'Source Serif 4', Georgia, serif;
+  --mono:'IBM Plex Mono', 'Courier New', monospace;
+  --sans:'Inter', -apple-system, sans-serif;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);}
+::selection{background:var(--brass);color:#fff;}
+
+.app{display:flex;min-height:100vh;}
+
+/* ---------- Sidebar ---------- */
+.sidebar{
+  width:272px;flex-shrink:0;background:var(--ink);color:#EDEFF6;
+  padding:28px 20px;position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.brand{display:flex;flex-direction:column;gap:2px;margin-bottom:6px;}
+.brand-mark{font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--brass);text-transform:uppercase;}
+.brand-title{font-family:var(--serif);font-size:21px;font-weight:600;line-height:1.25;color:#fff;}
+.brand-sub{font-family:var(--sans);font-size:12px;color:#9AA3BE;margin-top:6px;line-height:1.5;}
+.sidebar hr{border:none;border-top:1px solid #313E63;margin:20px 0;}
+
+.navgroup-label{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;color:#7A84A3;text-transform:uppercase;margin:18px 0 8px 4px;}
+.navitem{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  background:none;border:none;color:#C7CCDE;font-family:var(--sans);font-size:13.5px;font-weight:500;
+  padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:3px;transition:background .15s, color .15s;
+}
+.navitem .num{font-family:var(--mono);font-size:11px;color:#6E7794;width:16px;}
+.navitem:hover{background:#1D2A4C;color:#fff;}
+.navitem.active{background:var(--brass);color:var(--ink);font-weight:600;}
+.navitem.active .num{color:var(--ink);opacity:.65;}
+
+.sidebar-foot{margin-top:28px;padding-top:16px;border-top:1px solid #313E63;font-size:11.5px;color:#7A84A3;line-height:1.6;}
+.sidebar-foot b{color:#C7CCDE;}
+
+/* ---------- Main ---------- */
+.main{flex:1;min-width:0;padding:36px 44px 64px;max-width:1240px;}
+.section{display:none;}
+.section.active{display:block;animation:fade .25s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+.section-head{margin-bottom:22px;}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--brass-dark);text-transform:uppercase;margin-bottom:6px;}
+h1{font-family:var(--serif);font-size:30px;font-weight:600;margin:0 0 8px;color:var(--ink);}
+.lede{font-size:14.5px;color:var(--muted);max-width:760px;line-height:1.55;}
+
+/* stat chips */
+.stat-row{display:flex;gap:16px;flex-wrap:wrap;margin:26px 0 8px;}
+.stat-chip{
+  background:var(--paper-card);border:1px solid var(--line);border-radius:10px;
+  padding:16px 20px;min-width:150px;flex:1;
+}
+.stat-chip .v{font-family:var(--serif);font-size:28px;font-weight:600;color:var(--ink);}
+.stat-chip .l{font-size:11.5px;color:var(--muted);margin-top:2px;letter-spacing:.2px;}
+.stat-chip.good .v{color:var(--good);}
+.stat-chip.bad .v{color:var(--bad);}
+
+/* DAX / measure card (styled like a terminal/query card) */
+.query-card{
+  background:var(--ink);border-radius:10px;padding:16px 20px;margin:22px 0 18px;
+  font-family:var(--mono);font-size:12.5px;color:#CFE3D9;overflow-x:auto;
+  box-shadow: 0 1px 2px rgba(22,33,62,0.08);
+}
+.query-card .tag{display:inline-block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#7A84A3;border:1px solid #313E63;border-radius:20px;padding:2px 10px;margin-bottom:4px;}
+.query-card pre{margin:8px 0 0;white-space:pre-wrap;line-height:1.6;color:#D7DEEF;}
+
+/* controls */
+.controls{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:18px 0 8px;}
+.controls label{font-size:12px;color:var(--muted);font-weight:600;margin-right:6px;}
+select, input[type="text"]{
+  font-family:var(--sans);font-size:13.5px;padding:8px 12px;border-radius:8px;
+  border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;
+}
+input[type="text"]{cursor:text;min-width:220px;}
+select:focus, input:focus, .navitem:focus-visible, button:focus-visible{outline:2px solid var(--brass);outline-offset:2px;}
+
+/* card / panel */
+.panel{background:var(--paper-card);border:1px solid var(--line);border-radius:12px;padding:24px;margin-top:8px;}
+.panel + .panel{margin-top:18px;}
+.panel-title{font-family:var(--serif);font-size:16px;font-weight:600;margin:0 0 14px;color:var(--ink);}
+.two-col{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;}
+.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+@media (max-width:980px){.two-col,.three-col{grid-template-columns:1fr;}}
+
+.chart-wrap{position:relative;width:100%;}
+
+/* table */
+.table-scroll{max-height:520px;overflow:auto;}
+table{width:100%;border-collapse:collapse;font-size:13.5px;}
+thead th{
+  text-align:left;font-family:var(--mono);font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;
+  color:var(--muted);padding:9px 12px;border-bottom:2px solid var(--ink);background:var(--paper-card);position:sticky;top:0;
+}
+tbody td{padding:10px 12px;border-bottom:1px solid var(--line);font-family:var(--sans);}
+tbody tr:hover{background:#FAFAF9;}
+td.num, th.num{font-family:var(--mono);text-align:right;}
+.rank-badge{
+  display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;
+  font-family:var(--mono);font-size:12px;font-weight:600;
+}
+.rank-1{background:var(--brass);color:#fff;}
+.rank-2{background:#D8C6A6;color:var(--ink);}
+.rank-3{background:#EADFC7;color:var(--ink);}
+.rank-n{background:var(--paper);color:var(--muted);border:1px solid var(--line);}
+
+.grade-pill{font-family:var(--mono);font-size:11.5px;padding:2px 10px;border-radius:20px;font-weight:600;display:inline-block;}
+.g-Aplus,.g-A{background:#E4EFE9;color:var(--good);}
+.g-Bplus,.g-B{background:#EEF1DE;color:#6B7A3E;}
+.g-C{background:#F5EBDD;color:var(--brass-dark);}
+.g-D{background:#F5E3E3;color:#9B5B3D;}
+.g-F{background:#F5E3E3;color:var(--bad);}
+.result-pass{color:var(--good);font-weight:600;}
+.result-fail{color:var(--bad);font-weight:600;}
+
+.insight{
+  display:flex;gap:12px;background:#EEF1F8;border-left:3px solid var(--ink-2);border-radius:6px;
+  padding:14px 16px;margin-top:14px;font-size:13px;color:var(--ink-2);line-height:1.55;
+}
+.insight b{color:var(--ink);}
+.insight.warn{background:#FBF3E7;border-left-color:var(--brass-dark);}
+.insight.bad{background:#FBEEEE;border-left-color:var(--bad);}
+
+code{background:#EDEFF6;padding:1px 5px;border-radius:4px;font-family:var(--mono);font-size:12.5px;color:var(--ink-2);}
+.query-card code{background:none;padding:0;color:inherit;}
+
+/* data model / ERD */
+.erd{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start;margin:18px 0;}
+.erd-box{background:var(--paper-card);border:1.5px solid var(--ink-2);border-radius:10px;min-width:190px;overflow:hidden;}
+.erd-head{background:var(--ink-2);color:#fff;font-family:var(--mono);font-size:11.5px;letter-spacing:.5px;padding:8px 12px;font-weight:600;}
+.erd-body{padding:8px 0;}
+.erd-body div{padding:5px 12px;font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--line);}
+.erd-body div:last-child{border-bottom:none;}
+.erd-body b{color:var(--ink);font-weight:600;}
+.erd-note{font-family:var(--mono);font-size:11px;color:var(--brass-dark);background:#FBF3E7;padding:3px 10px;border-radius:20px;display:inline-block;margin-top:8px;}
+
+.badge-dq{font-family:var(--mono);font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:#fff;background:var(--bad);padding:2px 8px;border-radius:4px;margin-right:6px;}
+
+.footer-note{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);}
+
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <nav class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">B.Tech Internship · Power BI Analytics</div>
+      <div class="brand-title">GradeWise</div>
+      <div class="brand-sub">An Academic Analytics System — live KPIs, department &amp; grade analysis, and student-risk views computed from the GradeWise dataset, reproducing the report a Power BI model would deliver.</div>
+    </div>
+    <hr/>
+    <div class="navgroup-label">Overview</div>
+    <button class="navitem active" data-section="overview"><span class="num">00</span> Executive Summary</button>
+
+    <div class="navgroup-label">Analyses</div>
+    <button class="navitem" data-section="department"><span class="num">01</span> Department Performance</button>
+    <button class="navitem" data-section="grades"><span class="num">02</span> Grade &amp; Result Analysis</button>
+    <button class="navitem" data-section="risk"><span class="num">03</span> Top Performers &amp; At-Risk</button>
+    <button class="navitem" data-section="courses"><span class="num">04</span> Course &amp; Faculty Directory</button>
+
+    <div class="navgroup-label">Data Products</div>
+    <button class="navitem" data-section="directory"><span class="num">05</span> Student Directory</button>
+    <button class="navitem" data-section="model"><span class="num">06</span> Data Model &amp; Measures</button>
+
+    <div class="sidebar-foot">
+      Tables: <b>Students</b> · <b>Departments</b> · <b>Teachers</b> · <b>Courses</b> · <b>StudentPerformance</b><br/>
+      Techniques: DAX measures · star schema · calculated columns · slicers
+    </div>
+  </nav>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+
+    <!-- ===================== OVERVIEW ===================== -->
+    <section class="section active" id="sec-overview">
+      <div class="section-head">
+        <div class="eyebrow">Dashboard Home</div>
+        <h1>Executive Summary</h1>
+        <p class="lede">A single-page pulse check on GradeWise: 395 students across 5 departments, their exam
+        performance, CGPA, attendance and pass/fail outcomes — the same figures a Power BI landing page would
+        surface first.</p>
+      </div>
+
+      <div class="stat-row" id="overview-stats"></div>
+
+      <div class="two-col" style="margin-top:22px;">
+        <div class="panel">
+          <p class="panel-title">Average CGPA by department</p>
+          <div class="chart-wrap" style="height:280px;"><canvas id="overviewDeptChart"></canvas></div>
+        </div>
+        <div class="panel">
+          <p class="panel-title">Grade distribution</p>
+          <div class="chart-wrap" style="height:280px;"><canvas id="overviewGradeChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:18px;">
+        <p class="panel-title">What each page answers</p>
+        <table>
+          <tbody>
+            <tr><td style="width:220px;"><b>Department Performance</b></td><td style="color:var(--muted);font-size:12.5px;">Which department is doing best, and where's the risk concentrated?</td></tr>
+            <tr><td><b>Grade &amp; Result Analysis</b></td><td style="color:var(--muted);font-size:12.5px;">How are marks and CGPA distributed across the cohort?</td></tr>
+            <tr><td><b>Top Performers &amp; At-Risk</b></td><td style="color:var(--muted);font-size:12.5px;">Who should be recognised, and who needs intervention?</td></tr>
+            <tr><td><b>Course &amp; Faculty Directory</b></td><td style="color:var(--muted);font-size:12.5px;">What's taught, by whom, in which department?</td></tr>
+            <tr><td><b>Student Directory</b></td><td style="color:var(--muted);font-size:12.5px;">Searchable record-level detail for any student.</td></tr>
+            <tr><td><b>Data Model &amp; Measures</b></td><td style="color:var(--muted);font-size:12.5px;">The schema, relationships and DAX behind every number here.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== DEPARTMENT ===================== -->
+    <section class="section" id="sec-department">
+      <div class="section-head">
+        <div class="eyebrow">01 · Segmentation</div>
+        <h1>Department-wise Performance</h1>
+        <p class="lede">Every student carries a <code>DepartmentID</code>, so department is the one dimension that
+        cleanly slices CGPA, pass rate and attendance. Use the slicer to drill into one department at a time.</p>
+      </div>
+
+      <div class="query-card">
+        <span class="tag">DAX — measure</span>
+        <pre>Avg CGPA by Dept = AVERAGEX( VALUES(Students[DepartmentID]), [Average CGPA] )
+Pass Rate %       = DIVIDE( CALCULATE(COUNTROWS(StudentPerformance), StudentPerformance[Result]="Pass"), COUNTROWS(StudentPerformance) )</pre>
+      </div>
+
+      <div class="controls">
+        <label for="deptSelect">Department</label>
+        <select id="deptSelect"></select>
+      </div>
+
+      <div class="three-col">
+        <div class="panel"><p class="panel-title">Students</p><div class="stat-chip" style="border:none;padding:0;" id="deptStuChip"></div></div>
+        <div class="panel"><p class="panel-title">Avg CGPA</p><div class="stat-chip" style="border:none;padding:0;" id="deptCgpaChip"></div></div>
+        <div class="panel"><p class="panel-title">Pass rate</p><div class="stat-chip" style="border:none;padding:0;" id="deptPassChip"></div></div>
+      </div>
+
+      <div class="two-col" style="margin-top:18px;">
+        <div class="panel">
+          <p class="panel-title">All departments compared</p>
+          <div class="chart-wrap" style="height:260px;"><canvas id="deptCompareChart"></canvas></div>
+        </div>
+        <div class="panel">
+          <p class="panel-title">Gender split &amp; average attendance gap — selected department</p>
+          <div class="chart-wrap" style="height:260px;"><canvas id="deptGenderChart"></canvas></div>
+        </div>
+      </div>
+      <div class="insight" id="deptInsight"></div>
+    </section>
+
+    <!-- ===================== GRADES ===================== -->
+    <section class="section" id="sec-grades">
+      <div class="section-head">
+        <div class="eyebrow">02 · Distribution</div>
+        <h1>Grade &amp; Result Analysis</h1>
+        <p class="lede"><code>TotalMarks = Exam1 + Exam2 + FinalExam</code> feeds a 7-band grade
+        (F · D · C · B · B+ · A · A+) and a Pass/Fail result at the 30-mark line. This page shows how marks,
+        CGPA and absences move together.</p>
+      </div>
+
+      <div class="query-card">
+        <span class="tag">DAX — calculated column</span>
+        <pre>Grade Band = SWITCH( TRUE(),
+    StudentPerformance[TotalMarks] &gt;= 68, "A+",
+    StudentPerformance[TotalMarks] &gt;= 60, "A",
+    StudentPerformance[TotalMarks] &gt;= 53, "B+",
+    StudentPerformance[TotalMarks] &gt;= 45, "B",
+    StudentPerformance[TotalMarks] &gt;= 38, "C",
+    StudentPerformance[TotalMarks] &gt;= 30, "D",
+    "F" )</pre>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <p class="panel-title">Total marks distribution (histogram)</p>
+          <div class="chart-wrap" style="height:270px;"><canvas id="marksHistChart"></canvas></div>
+        </div>
+        <div class="panel">
+          <p class="panel-title">CGPA vs. Absences (each dot = one student)</p>
+          <div class="chart-wrap" style="height:270px;"><canvas id="scatterChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:18px;">
+        <p class="panel-title">Pass/Fail by department</p>
+        <div class="chart-wrap" style="height:260px;"><canvas id="passFailStackChart"></canvas></div>
+      </div>
+      <div class="insight" id="gradesInsight"></div>
+    </section>
+
+    <!-- ===================== RISK ===================== -->
+    <section class="section" id="sec-risk">
+      <div class="section-head">
+        <div class="eyebrow">03 · Ranking</div>
+        <h1>Top Performers &amp; At-Risk Students</h1>
+        <p class="lede">Two lists computed off the same table: the top 10 by CGPA for recognition, and every
+        failing student for intervention — sorted by absences so the highest-attendance-risk cases surface first.</p>
+      </div>
+
+      <div class="query-card">
+        <span class="tag">DAX — measure</span>
+        <pre>Top N Rank   = RANKX( ALL(StudentPerformance), StudentPerformance[Cgpa], , DESC )
+At-Risk Flag = IF( StudentPerformance[Result] = "Fail" || StudentPerformance[Absences] &gt; 15, "At Risk", "On Track" )</pre>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <p class="panel-title">Top 10 by CGPA</p>
+          <div class="table-scroll"><table id="topTable"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="panel">
+          <p class="panel-title">At-risk students (Failing, ranked by absences)</p>
+          <div class="table-scroll" style="max-height:420px;"><table id="riskTable"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <div class="insight bad" id="riskInsight"></div>
+    </section>
+
+    <!-- ===================== COURSES ===================== -->
+    <section class="section" id="sec-courses">
+      <div class="section-head">
+        <div class="eyebrow">04 · Reference</div>
+        <h1>Course &amp; Faculty Directory</h1>
+        <p class="lede">25 courses across 5 departments, taught by 15 faculty. This directory is descriptive
+        reference data — see the callout below on why it can't be joined to individual exam performance.</p>
+      </div>
+
+      <div class="insight warn">
+        <div><span class="badge-dq">Data model note</span><b>Courses aren't linked to marks.</b> <code>StudentPerformance</code>
+        has one row per student (overall CGPA/marks), not one row per student-per-course. Its raw <code>CourseID</code>
+        column turned out to be a duplicate of <code>Absences</code> (identical values in every row), so it isn't a
+        usable foreign key. A real Power BI model would need a proper <code>Enrollments</code> fact table
+        (StudentID, CourseID, marks) to report performance <i>by course</i> — see the Data Model page for the fix.</div>
+      </div>
+
+      <div class="controls">
+        <label for="courseDeptFilter">Filter by department</label>
+        <select id="courseDeptFilter"></select>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title">Courses</p>
+        <div class="table-scroll"><table id="courseTable"><thead></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title">Faculty headcount by department</p>
+        <div class="chart-wrap" style="height:230px;"><canvas id="facultyChart"></canvas></div>
+      </div>
+    </section>
+
+    <!-- ===================== DIRECTORY ===================== -->
+    <section class="section" id="sec-directory">
+      <div class="section-head">
+        <div class="eyebrow">05 · Record Detail</div>
+        <h1>Student Directory</h1>
+        <p class="lede">Every student, searchable by name or ID, filterable by department and result — the
+        drill-through detail page behind every chart on this dashboard.</p>
+      </div>
+
+      <div class="controls">
+        <label for="dirSearch">Search</label>
+        <input type="text" id="dirSearch" placeholder="Name or Student ID…"/>
+        <label for="dirDeptFilter">Department</label>
+        <select id="dirDeptFilter"></select>
+        <label for="dirResultFilter">Result</label>
+        <select id="dirResultFilter">
+          <option value="all">All</option>
+          <option value="Pass">Pass</option>
+          <option value="Fail">Fail</option>
+        </select>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title">Students <span id="dirCount" style="color:var(--muted);font-weight:400;font-family:var(--mono);font-size:12px;"></span></p>
+        <div class="table-scroll"><table id="dirTable"><thead></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ===================== MODEL ===================== -->
+    <section class="section" id="sec-model">
+      <div class="section-head">
+        <div class="eyebrow">06 · Documentation</div>
+        <h1>Data Model &amp; Measures</h1>
+        <p class="lede">The star-schema this dashboard (and a real Power BI report) is built on, plus the
+        data-quality findings from profiling the raw workbook and the DAX measures used throughout.</p>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title">Relationships</p>
+        <div class="erd">
+          <div class="erd-box">
+            <div class="erd-head">Departments (5)</div>
+            <div class="erd-body"><div><b>DepartmentID</b> PK</div><div>DepartmentName</div></div>
+          </div>
+          <div class="erd-box">
+            <div class="erd-head">Teachers (15)</div>
+            <div class="erd-body"><div><b>TeacherID</b> PK</div><div>TeacherName</div><div>DepartmentID FK</div></div>
+          </div>
+          <div class="erd-box">
+            <div class="erd-head">Courses (25)</div>
+            <div class="erd-body"><div><b>CourseID</b> PK</div><div>CourseName</div><div>DepartmentID FK</div><div>TeacherID FK</div><div>Credits</div></div>
+          </div>
+          <div class="erd-box">
+            <div class="erd-head">Students (395)</div>
+            <div class="erd-body"><div><b>StudentID</b> PK</div><div>Name, Gender, Age, DOB</div><div>DepartmentID FK</div><div>AdmissionYear, Semester, StudyHours</div></div>
+          </div>
+          <div class="erd-box">
+            <div class="erd-head">StudentPerformance (395)</div>
+            <div class="erd-body"><div><b>StudentID</b> PK / FK (1:1)</div><div>Exam1, Exam2, FinalExam</div><div>TotalMarks, Grade, Result</div><div>Absences, Cgpa</div></div>
+          </div>
+        </div>
+        <span class="erd-note">1 : Many — Departments → Teachers / Courses / Students · 1 : 1 — Students ↔ StudentPerformance</span>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title">Data quality findings from profiling</p>
+        <table>
+          <tbody>
+            <tr><td style="width:170px;"><span class="badge-dq">Fixed / Clean</span></td><td>Zero nulls and zero duplicate rows across all 6 sheets. <code>TotalMarks</code> and grade bands recompute exactly from source columns.</td></tr>
+            <tr><td><span class="badge-dq">Broken key</span></td><td><code>StudentPerformance.CourseID</code> is numeric (0–75) while <code>Courses.CourseID</code> is text (C001–C025) — and every value is an exact duplicate of <code>Absences</code>. It cannot be used to join performance to a specific course.</td></tr>
+            <tr><td><span class="badge-dq">Mis-tagged rows</span></td><td>3 Mechanical-sounding courses (Engineering Mechanics, Thermodynamics, Manufacturing Processes) are tagged <code>D003</code> (ECE) instead of <code>D004</code>, and Surveying is tagged <code>D004</code> instead of <code>D005</code> (Civil). Recommend confirming with the source before reassigning.</td></tr>
+            <tr><td><span class="badge-dq">Unrelated sheet</span></td><td>The <code>student-mat</code> sheet is the public UCI "Student Performance" dataset (Portuguese schools) — it has no <code>StudentID</code> or shared key, so it can't join to the GradeWise tables. Left out of this dashboard; useful only as a separate, standalone analysis.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title">Suggested calculated columns &amp; measures for the Power BI build</p>
+        <div class="query-card">
+          <span class="tag">Calculated columns</span>
+          <pre>Full Name        = Students[FirstName] &amp; " " &amp; Students[LastName]
+Age at Admission = DATEDIFF(Students[DOB], DATE(Students[AdmissionYear],7,1), YEAR)
+Grade Band       = SWITCH(TRUE(), ...)   -- see Grades page
+At-Risk Flag     = IF(StudentPerformance[Result]="Fail" || StudentPerformance[Absences]&gt;15, "At Risk", "On Track")</pre>
+        </div>
+        <div class="query-card">
+          <span class="tag">Key measures</span>
+          <pre>Average CGPA   = AVERAGE(StudentPerformance[Cgpa])
+Pass Rate %    = DIVIDE(CALCULATE(COUNTROWS(StudentPerformance), StudentPerformance[Result]="Pass"), COUNTROWS(StudentPerformance))
+Avg Absences   = AVERAGE(StudentPerformance[Absences])
+At-Risk Count  = CALCULATE(COUNTROWS(StudentPerformance), [At-Risk Flag]="At Risk")
+Top Student    = CALCULATE(MAX(StudentPerformance[Cgpa]))</pre>
+        </div>
+      </div>
+
+      <div class="footer-note">
+        Built for a B.Tech internship submission · Data profiled from <code>GradeWise_Dataset.xlsx</code> ·
+        This page reproduces the visuals a Power BI report (Students / Departments / Teachers / Courses / StudentPerformance
+        star schema) would show — export it to Power BI Desktop using the model and DAX above for the graded submission.
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+/* =========================================================
+   RAW DATA — profiled from GradeWise_Dataset.xlsx
+   DEPARTMENTS: [id, name]
+   TEACHERS:    [id, name, deptId]
+   COURSES:     [id, name, deptId, teacherId, credits]
+   STUDENTS:    [id, firstName, lastName, gender, age, deptId, admissionYear, semester, studyHours]
+   PERF:        [studentId, exam1, exam2, finalExam, totalMarks, grade, result, absences, cgpa]
+   ========================================================= */
+const DEPARTMENTS = [["D001","Computer Science Engineering"],["D002","Artificial Intelligence & Data Science"],["D003","Electronics & Communication Engineering"],["D004","Mechanical Engineering"],["D005","Civil Engineering"]];
+const TEACHERS = [["T001","Dr. Amit Sharma","D001"],["T002","Dr. Neha Verma","D001"],["T003","Dr. Rahul Mehta","D001"],["T004","Dr. Priya Kapoor","D002"],["T005","Dr. Arjun Singh","D002"],["T006","Dr. Kavita Joshi","D002"],["T007","Dr. Rakesh Gupta","D003"],["T008","Dr. Sneha Nair","D003"],["T009","Dr. Mohit Jain","D003"],["T010","Dr. Vivek Rao","D004"],["T011","Dr. Pooja Mishra","D004"],["T012","Dr. Karan Patel","D004"],["T013","Dr. Deepak Yadav","D005"],["T014","Dr. Meera Iyer","D005"],["T015","Dr. Anil Chawla","D005"]];
+const COURSES = [["C001","Programming Fundamentals","D001","T001",4],["C002","Data Structures","D001","T002",4],["C003","Database Management Systems","D001","T003",4],["C004","Computer Networks","D001","T001",3],["C005","Operating Systems","D001","T002",4],["C006","Python Programming","D001","T003",4],["C007","Machine Learning","D002","T004",3],["C008","Artificial Intelligence","D002","T005",4],["C009","Data Analytics","D002","T006",4],["C010","Deep Learning","D002","T004",4],["C011","Digital Electronics","D002","T005",4],["C012","Signals and Systems","D002","T006",3],["C013","Microprocessors","D003","T007",4],["C014","Embedded Systems","D003","T008",4],["C015","Communication Systems","D003","T009",3],["C016","Engineering Mechanics","D003","T007",4],["C017","Thermodynamics","D003","T008",3],["C018","Manufacturing Processes","D003","T009",4],["C019","CAD/CAM","D004","T010",4],["C020","Robotics","D004","T011",4],["C021","Surveying","D004","T012",3],["C022","Structural Analysis","D005","T010",4],["C023","Geotechnical Engineering","D005","T013",4],["C024","Transportation Engineering","D005","T014",4],["C025","Environmental Engineering","D005","T015",3]];
+const STUDENTS = [["STU0001","Ekta","Chawla","F",18,"D005",2025,2,2],["STU0002","Shreya","Jhala","F",19,"D001",2024,3,2],["STU0003","Ekta","Rajput","F",20,"D001",2023,6,2],["STU0004","Vaishnavi","Kale","F",21,"D005",2022,7,3],["STU0005","Lavanya","Saha","F",18,"D001",2025,1,2],["STU0006","Atharv","Naidu","M",19,"D002",2024,3,2],["STU0007","Nikhil","Khandelwal","M",20,"D004",2023,6,2],["STU0008","Yamini","Seth","F",18,"D003",2025,2,2],["STU0009","Pranav","Dubey","M",22,"D005",2022,7,2],["STU0010","Aditya","Deshmukh","M",19,"D002",2024,3,2],["STU0011","Ekta","Pandey","F",20,"D005",2023,5,2],["STU0012","Payal","Purohit","F",18,"D002",2025,2,3],["STU0013","Pankaj","Gupta","M",19,"D002",2024,4,1],["STU0014","Gaurav","Patel","M",21,"D002",2022,8,2],["STU0015","Sumit","Khanna","M",20,"D002",2023,5,3],["STU0016","Damini","Kapoor","F",18,"D003",2025,1,1],["STU0017","Aarohi","Pandit","F",19,"D005",2024,4,3],["STU0018","Ishita","Kapoor","F",22,"D002",2022,8,2],["STU0019","Vivaan","Malhotra","M",18,"D004",2025,2,1],["STU0020","Aarush","Patil","M",20,"D005",2023,5,1],["STU0021","Anirudh","Thakur","M",19,"D001",2024,3,2],["STU0022","Aman","Sengar","M",18,"D001",2025,1,1],["STU0023","Naveen","Nair","M",20,"D002",2023,6,2],["STU0024","Sumit","Jhala","M",21,"D005",2022,7,2],["STU0025","Divyanshi","Malhotra","F",19,"D002",2024,4,3],["STU0026","Garima","Mathur","F",18,"D002",2025,2,1],["STU0027","Adarsh","Das","M",20,"D003",2023,5,1],["STU0028","Abhishek","Parmar","M",19,"D003",2024,3,1],["STU0029","Bhupendra","Banerjee","M",21,"D001",2022,8,2],["STU0030","Tushar","Agrawal","M",18,"D003",2025,1,2],["STU0031","Ritik","Nagpal","M",19,"D004",2024,4,2],["STU0032","Kartik","Thakur","M",20,"D005",2023,5,2],["STU0033","Atharv","Chawla","M",18,"D004",2025,2,2],["STU0034","Karan","Tiwari","M",21,"D005",2022,8,2],["STU0035","Om","Chandel","M",19,"D002",2024,4,1],["STU0036","Urvashi","Gupta","F",20,"D002",2023,5,1],["STU0037","Tushar","Yadav","M",18,"D001",2025,2,3],["STU0038","Devesh","Singh","M",19,"D005",2024,3,3],["STU0039","Rashmi","Shinde","F",22,"D002",2022,7,3],["STU0040","Rutuja","Bajaj","F",20,"D005",2023,5,1],["STU0041","Aditi","Menon","F",18,"D003",2025,1,2],["STU0042","Tushar","Juneja","M",19,"D004",2024,4,1],["STU0043","Ritik","Suri","M",20,"D003",2023,6,2],["STU0044","Dheeraj","Sengar","M",21,"D003",2022,7,1],["STU0045","Riya","Mehta","F",18,"D004",2025,2,2],["STU0046","Alisha","Banerjee","F",19,"D001",2024,4,2],["STU0047","Amisha","Soni","F",20,"D004",2023,5,2],["STU0048","Ritesh","Sandhu","M",18,"D004",2025,1,4],["STU0049","Abeer","Juneja","M",21,"D002",2022,8,2],["STU0050","Urvashi","Narang","F",19,"D005",2024,4,2],["STU0051","Anusha","Sandhu","F",20,"D002",2023,5,2],["STU0052","Pragati","Solanki","F",18,"D005",2025,1,2],["STU0053","Daksh","Patil","M",19,"D002",2024,3,1],["STU0054","Garima","Vyas","F",21,"D003",2022,8,1],["STU0055","Aashna","Suri","F",20,"D001",2023,6,1],["STU0056","Sneha","Suri","F",19,"D002",2024,3,2],["STU0057","Kritika","Kulkarni","F",18,"D003",2025,1,2],["STU0058","Amogh","Arora","M",20,"D004",2023,5,2],["STU0059","Akhil","Kale","M",21,"D003",2022,7,2],["STU0060","Akshi","Mahajan","F",19,"D005",2024,4,2],["STU0061","Sneha","Malhotra","F",18,"D004",2025,2,2],["STU0062","Apoorva","Dutta","F",20,"D002",2023,6,1],["STU0063","Hemlata","Mukherjee","F",19,"D001",2024,4,2],["STU0064","Aastha","Tandon","F",22,"D005",2022,7,3],["STU0065","Navya","Chandel","F",18,"D005",2025,1,2],["STU0066","Meera","Deshmukh","F",20,"D005",2023,5,2],["STU0067","Adarsh","Juneja","M",19,"D001",2024,4,4],["STU0068","Kavya","Arora","F",21,"D003",2022,7,4],["STU0069","Pragati","Rana","F",20,"D001",2023,5,2],["STU0070","Samridhi","Pathak","F",18,"D004",2025,1,4],["STU0071","Lokesh","Saxena","M",19,"D004",2024,3,4],["STU0072","Rahul","Rajput","M",20,"D003",2023,6,4],["STU0073","Vaishali","Seth","F",21,"D005",2022,7,2],["STU0074","Gulshan","Patel","M",19,"D001",2024,3,1],["STU0075","Karishma","Shukla","F",18,"D003",2025,1,2],["STU0076","Kavyansh","Gupta","M",20,"D001",2023,6,2],["STU0077","Dhananjay","Rathore","M",19,"D001",2024,3,4],["STU0078","Kriti","Sisodia","F",18,"D003",2025,2,4],["STU0079","Rohit","Sengar","M",21,"D005",2022,7,1],["STU0080","Sanya","Jhala","F",20,"D002",2023,5,2],["STU0081","Om","Prasad","M",19,"D004",2024,4,1],["STU0082","Gagan","Shetty","M",22,"D004",2022,8,3],["STU0083","Myra","Kapoor","F",18,"D002",2025,2,2],["STU0084","Devesh","Mathur","M",20,"D001",2023,5,2],["STU0085","Vaishali","Srivastava","F",19,"D002",2024,3,2],["STU0086","Ananya","Arora","F",21,"D003",2022,8,2],["STU0087","Aditi","Deshmukh","F",18,"D003",2025,1,2],["STU0088","Preeti","Kapoor","F",20,"D003",2023,6,3],["STU0089","Anirudh","Solanki","M",19,"D003",2024,3,2],["STU0090","Gaurav","Solanki","M",18,"D004",2025,2,2],["STU0091","Alisha","Gupta","F",21,"D005",2022,8,3],["STU0092","Megha","Juneja","F",20,"D003",2023,6,1],["STU0093","Kriti","Soni","F",19,"D002",2024,4,2],["STU0094","Dixita","Singh","F",18,"D002",2025,2,2],["STU0095","Dheeraj","Nagpal","M",20,"D002",2023,6,4],["STU0096","Myra","Chawla","F",21,"D005",2022,8,4],["STU0097","Dhananjay","Chandel","M",19,"D002",2024,3,1],["STU0098","Sakshi","Sandhu","F",20,"D005",2023,6,2],["STU0099","Anamika","Choudhary","F",18,"D001",2025,1,1],["STU0100","Bhavna","Prasad","F",19,"D005",2024,3,3],["STU0101","Aman","Mahavar","M",18,"D001",2025,2,1],["STU0102","Deepak","Narang","M",19,"D002",2024,4,3],["STU0103","Deepak","Ahuja","M",20,"D003",2023,5,1],["STU0104","Charu","Narang","F",21,"D003",2022,7,2],["STU0105","Hemant","Lal","M",18,"D005",2025,2,2],["STU0106","Nikita","Naidu","F",20,"D005",2023,5,4],["STU0107","Mahima","Nagpal","F",19,"D002",2024,4,4],["STU0108","Hriday","Prasad","M",18,"D003",2025,1,3],["STU0109","Manish","Roy","M",22,"D004",2022,7,4],["STU0110","Parul","Agrawal","F",20,"D005",2023,5,3],["STU0111","Anirudh","Iyer","M",19,"D002",2024,4,1],["STU0112","Diya","Chauhan","F",18,"D005",2025,1,3],["STU0113","Khyati","Pathak","F",21,"D005",2022,7,2],["STU0114","Digvijay","Sengar","M",20,"D005",2023,6,1],["STU0115","Mohit","Purohit","M",19,"D003",2024,3,2],["STU0116","Arjun","Chauhan","M",18,"D001",2025,2,2],["STU0117","Saksham","Paliwal","M",20,"D003",2023,5,2],["STU0118","Ayush","Iyer","M",21,"D002",2022,7,1],["STU0119","Rajat","Malhotra","M",19,"D001",2024,3,2],["STU0120","Rohan","Reddy","M",20,"D004",2023,6,1],["STU0121","Himani","Iyer","F",18,"D004",2025,2,2],["STU0122","Gaurav","Tandon","M",19,"D005",2024,4,4],["STU0123","Prachi","Tandon","F",20,"D005",2023,6,2],["STU0124","Rajat","Agrawal","M",21,"D003",2022,8,1],["STU0125","Tanisha","Deshmukh","F",18,"D004",2025,2,2],["STU0126","Gagan","Tandon","M",19,"D002",2024,3,1],["STU0127","Rashmi","Kohli","F",20,"D005",2023,6,2],["STU0128","Aditi","Sandhu","F",18,"D004",2025,1,2],["STU0129","Yashveer","Bhardwaj","M",22,"D002",2022,7,1],["STU0130","Harsh","Roy","M",19,"D004",2024,3,1],["STU0131","Ananya","Mukherjee","F",20,"D004",2023,6,3],["STU0132","Akshi","Iyer","F",21,"D001",2022,7,1],["STU0133","Tina","Shinde","F",18,"D002",2025,2,1],["STU0134","Harshita","Maurya","F",19,"D003",2024,4,1],["STU0135","Raghav","Bhatia","M",20,"D004",2023,5,2],["STU0136","Manvi","Reddy","F",18,"D004",2025,2,3],["STU0137","Eklavya","Bhadoria","M",21,"D003",2022,7,2],["STU0138","Muskan","Mehta","F",19,"D001",2024,3,1],["STU0139","Arun","Choudhary","M",20,"D003",2023,6,2],["STU0140","Himani","Verma","F",18,"D002",2025,1,1],["STU0141","Aditya","Bhadoria","M",19,"D003",2024,3,4],["STU0142","Kavyansh","Jhala","M",20,"D003",2023,6,1],["STU0143","Gunjan","Tandon","F",22,"D001",2022,7,3],["STU0144","Navya","Pawar","F",18,"D001",2025,2,1],["STU0145","Amogh","Rawat","M",21,"D003",2022,7,1],["STU0146","Avantika","Soni","F",19,"D002",2024,3,2],["STU0147","Parul","Goyal","F",20,"D004",2023,6,2],["STU0148","Trisha","Roy","F",18,"D005",2025,1,2],["STU0149","Yuvansh ","Tripathi","M",19,"D001",2024,3,1],["STU0150","Amardeep","Prasad","M",20,"D004",2023,5,1],["STU0151","Shivam","Bhatt","M",21,"D003",2022,7,1],["STU0152","Yash","Rana","M",18,"D005",2025,1,1],["STU0153","Gauri","Lal","F",19,"D002",2024,4,3],["STU0154","Aarush","Mukherjee","M",20,"D004",2023,6,1],["STU0155","Pallavi","Shukla","F",18,"D005",2025,2,1],["STU0156","Tushar","Singh","M",22,"D004",2022,8,2],["STU0157","Indrajeet","Tripathi","M",19,"D005",2024,4,1],["STU0158","Shruti","Rajput","F",20,"D005",2023,6,1],["STU0159","Arjun","Nair","M",21,"D003",2022,7,1],["STU0160","Deepak","Verma","M",18,"D002",2025,2,2],["STU0161","Ankit","Yadav","M",19,"D005",2024,3,1],["STU0162","Akhil","Nagpal","M",20,"D002",2023,6,2],["STU0163","Pankaj","Sengar","M",18,"D001",2025,2,1],["STU0164","Ansh","Ahuja","M",21,"D005",2022,8,1],["STU0165","Kunal","Srivastava","M",19,"D001",2024,3,2],["STU0166","Saransh","Vyas","M",20,"D005",2023,5,1],["STU0167","Devesh","Malhotra","M",22,"D001",2022,7,2],["STU0168","Vanya","Bajaj","F",18,"D003",2025,2,2],["STU0169","Mansi","Mahajan","F",19,"D005",2024,4,2],["STU0170","Neha","Dutta","F",21,"D002",2022,8,2],["STU0171","Raghav","Mahajan","M",20,"D004",2023,6,1],["STU0172","Nikhil","Khandelwal","M",18,"D002",2025,2,2],["STU0173","Darshan","Kale","M",19,"D002",2024,3,2],["STU0174","Aashna","Juneja","F",20,"D003",2023,6,2],["STU0175","Preeti","Chawla","F",18,"D001",2025,2,2],["STU0176","Rohan","Soni","M",21,"D002",2022,7,2],["STU0177","Manvi","Soni","F",19,"D004",2024,4,2],["STU0178","Dhananjay","Vyas","M",20,"D003",2023,5,2],["STU0179","Pankaj","Jaiswal","M",18,"D002",2025,2,1],["STU0180","Avinash","Saha","M",22,"D004",2022,7,2],["STU0181","Gulshan","Vyas","M",19,"D004",2024,3,2],["STU0182","Arvind","Rawat","M",20,"D003",2023,5,2],["STU0183","Arpita","Lal","F",21,"D001",2022,8,2],["STU0184","Arya","Chawla","F",18,"D002",2025,2,2],["STU0185","Tanisha","Nair","F",19,"D002",2024,3,2],["STU0186","Varun","Tiwari","M",20,"D003",2023,6,2],["STU0187","Harsh","Lodhi","M",18,"D004",2025,1,1],["STU0188","Gulshan","Baghel","M",21,"D004",2022,7,2],["STU0189","Akanksha","Thakur","F",19,"D001",2024,4,2],["STU0190","Tanmay","Kohli","M",20,"D004",2023,6,2],["STU0191","Swati","Verma","F",18,"D002",2025,2,2],["STU0192","Aashna","Saha","F",19,"D001",2024,4,2],["STU0193","Aryan","Bansal","M",22,"D003",2022,7,2],["STU0194","Ayaan","Yadav","M",20,"D005",2023,6,1],["STU0195","Arun","Kulkarni","M",18,"D003",2025,1,1],["STU0196","Diya","Tyagi","F",21,"D003",2022,8,2],["STU0197","Mayank","Pawar","M",19,"D001",2024,4,1],["STU0198","Naveen","Mahajan","M",20,"D003",2023,6,1],["STU0199","Tanvi","Joshi","F",18,"D001",2025,1,1],["STU0200","Megha","Pawar","F",19,"D002",2024,4,2],["STU0201","Harshita","Chawla","F",20,"D005",2023,5,2],["STU0202","Preeti","Narang","F",18,"D002",2025,2,2],["STU0203","Suhani","Nagpal","F",19,"D001",2024,3,2],["STU0204","Divyanshi","Bose","F",21,"D001",2022,8,1],["STU0205","Apoorva","Solanki","F",18,"D002",2025,2,4],["STU0206","Aarohi","Shinde","F",20,"D001",2023,5,3],["STU0207","Preeti","Kumar","F",19,"D001",2024,4,2],["STU0208","Damini","Nagpal","F",22,"D003",2022,8,2],["STU0209","Akshi","Nair","F",18,"D005",2025,1,1],["STU0210","Manvi","Mathur","F",21,"D001",2022,7,3],["STU0211","Khyati","Malhotra","F",19,"D005",2024,3,4],["STU0212","Kartikeya","Goyal","M",20,"D001",2023,6,2],["STU0213","Vaishnavi","Mathur","F",18,"D003",2025,1,2],["STU0214","Kartik","Suri","M",19,"D003",2024,4,2],["STU0215","Apoorva","Sharma","F",20,"D003",2023,6,1],["STU0216","Bhavna","Patil","F",21,"D005",2022,7,2],["STU0217","Charu","Shetty","F",18,"D002",2025,2,2],["STU0218","Hitesh","Kumar","M",19,"D001",2024,4,2],["STU0219","Tanisha","Pathak","F",22,"D005",2022,8,1],["STU0220","Aastha","Sengar","F",20,"D005",2023,6,3],["STU0221","Muskan","Bhardwaj","F",18,"D001",2025,2,2],["STU0222","Heena","Nagpal","F",19,"D002",2024,4,3],["STU0223","Komal","Sabharwal","F",21,"D005",2022,8,2],["STU0224","Hemant","Solanki","M",20,"D004",2023,5,2],["STU0225","Priya","Paliwal","F",18,"D004",2025,2,3],["STU0226","Apoorva","Suri","F",19,"D001",2024,4,2],["STU0227","Pallavi","Pandey","F",20,"D001",2023,6,2],["STU0228","Anirudh","Sengar","M",18,"D002",2025,2,2],["STU0229","Tarun","Thakur","M",21,"D005",2022,8,2],["STU0230","Lavanya","Lodhi","F",19,"D001",2024,3,3],["STU0231","Kusum","Vyas","F",20,"D001",2023,6,2],["STU0232","Anmol","Sabharwal","M",22,"D004",2022,7,2],["STU0233","Mayank","Mahajan","M",18,"D002",2025,1,2],["STU0234","Anshul","Srivastava","M",19,"D003",2024,4,2],["STU0235","Eklavya","Yadav","M",20,"D005",2023,6,2],["STU0236","Tanmay","Narang","M",21,"D003",2022,7,3],["STU0237","Rajat","Verma","M",18,"D004",2025,2,2],["STU0238","Charu","Pandit","F",20,"D005",2023,6,1],["STU0239","Samridhi","Banerjee","F",19,"D002",2024,4,2],["STU0240","Anshul","Mehta","M",18,"D004",2025,1,2],["STU0241","Indrajeet","Mahajan","M",21,"D004",2022,8,2],["STU0242","Krish","Jaiswal","M",20,"D005",2023,5,2],["STU0243","Indrajeet","Jain","M",19,"D004",2024,4,1],["STU0244","Dev","Naidu","M",22,"D004",2022,8,1],["STU0245","Kritika","Yogi","F",18,"D003",2025,1,3],["STU0246","Akhil","Chauhan","M",20,"D001",2023,5,1],["STU0247","Harsh","Gill","M",19,"D004",2024,3,1],["STU0248","Saksham","Prajapati","M",21,"D004",2022,8,1],["STU0249","Om","Parmar","M",18,"D002",2025,1,2],["STU0250","Sumit","Tripathi","M",20,"D002",2023,5,1],["STU0251","Varun","Mahajan","M",19,"D004",2024,4,1],["STU0252","Parth","Agrawal","M",18,"D003",2025,1,2],["STU0253","Anshul","Das","M",20,"D004",2023,5,1],["STU0254","Anshul","Chauhan","M",21,"D004",2022,7,1],["STU0255","Avinash","Parmar","M",18,"D001",2025,2,1],["STU0256","Siddharth","Khanna","M",19,"D005",2024,4,1],["STU0257","Parul","Tomar","F",20,"D002",2023,6,4],["STU0258","Adarsh","Solanki","M",18,"D005",2025,2,2],["STU0259","Rohan","Saha","M",22,"D005",2022,8,2],["STU0260","Komal","Tiwari","F",19,"D001",2024,3,4],["STU0261","Harshita","Sisodia","F",20,"D004",2023,6,2],["STU0262","Karan","Kulkarni","M",21,"D001",2022,7,2],["STU0263","Darshan","Lal","M",18,"D002",2025,1,3],["STU0264","Mahima","Sabharwal","F",19,"D001",2024,3,3],["STU0265","Kritika","Rana","F",20,"D001",2023,6,3],["STU0266","Aryan","Jaiswal","M",18,"D001",2025,1,2],["STU0267","Atharv","Seth","M",21,"D003",2022,8,2],["STU0268","Anamika","Talwar","F",19,"D002",2024,4,2],["STU0269","Amardeep","Kulkarni","M",22,"D003",2022,7,2],["STU0270","Khushi","Bisht","F",20,"D005",2023,6,2],["STU0271","Shruti","Narang","F",18,"D004",2025,2,2],["STU0272","Himani","Soni","F",19,"D001",2024,4,4],["STU0273","Myra","Gill","F",20,"D004",2023,5,2],["STU0274","Darshan","Narang","M",21,"D004",2022,8,2],["STU0275","Kritika","Talwar","F",18,"D003",2025,2,2],["STU0276","Vaishali","Sabharwal","F",20,"D005",2023,5,2],["STU0277","Sanya","Roy","F",19,"D001",2024,4,2],["STU0278","Dheeraj","Jain","M",18,"D005",2025,1,1],["STU0279","Himani","Sandhu","F",21,"D003",2022,7,2],["STU0280","Adarsh","Kale","M",20,"D003",2023,6,1],["STU0281","Abhishek","Rathore","M",19,"D004",2024,4,1],["STU0282","Bhavesh","Talwar","M",22,"D001",2022,8,1],["STU0283","Rutuja","Saxena","F",18,"D004",2025,1,4],["STU0284","Lavanya","Patil","F",19,"D004",2024,3,2],["STU0285","Avantika","Kapoor","F",20,"D002",2023,6,2],["STU0286","Aryan","Tiwari","M",21,"D003",2022,7,2],["STU0287","Suhani","Pathak","F",18,"D004",2025,1,3],["STU0288","Hemlata","Jaiswal","F",19,"D005",2024,3,3],["STU0289","Raghav","Rawat","M",20,"D004",2023,5,3],["STU0290","Abeer","Naidu","M",18,"D002",2025,1,2],["STU0291","Dev","Joshi","M",22,"D004",2022,7,2],["STU0292","Bhavya","Gill","F",19,"D005",2024,4,3],["STU0293","Vaishnavi","Sengar","F",20,"D005",2023,5,2],["STU0294","Apoorva","Dutta","F",21,"D005",2022,7,4],["STU0295","Kavyansh","Chauhan","M",18,"D001",2025,1,3],["STU0296","Chirag","Tripathi","M",19,"D005",2024,4,1],["STU0297","Dixita","Choudhary","F",20,"D002",2023,6,2],["STU0298","Shruti","Chawla","F",18,"D002",2025,1,2],["STU0299","Karishma","Deshmukh","F",21,"D005",2022,7,4],["STU0300","Bhavesh","Yogi","M",19,"D003",2024,4,1],["STU0301","Vaishnavi","Sandhu","F",20,"D002",2023,6,2],["STU0302","Anirudh","Pandey","M",18,"D004",2025,1,1],["STU0303","Shreya","Tyagi","F",19,"D001",2024,3,3],["STU0304","Yamini","Talwar","F",21,"D005",2022,7,4],["STU0305","Sumit","Purohit","M",18,"D004",2025,2,2],["STU0306","Aastha","Pawar","F",20,"D005",2023,5,2],["STU0307","Arpit","Mukherjee","M",19,"D002",2024,3,1],["STU0308","Lakshay","Iyer","M",22,"D005",2022,8,1],["STU0309","Anshul","Wadhwa","M",18,"D003",2025,2,2],["STU0310","Manvi","Chandel","F",19,"D003",2024,4,2],["STU0311","Khushi","Bhatt","F",20,"D001",2023,6,2],["STU0312","Trisha","Rajput","F",21,"D005",2022,7,2],["STU0313","Akash","Shinde","M",18,"D004",2025,2,2],["STU0314","Palak","Saha","F",19,"D004",2024,3,2],["STU0315","Simran","Maurya","F",20,"D003",2023,6,3],["STU0316","Tina","Bhatt","F",18,"D003",2025,1,3],["STU0317","Khushi","Reddy","F",21,"D005",2022,7,2],["STU0318","Pallavi","Tiwari","F",19,"D004",2024,3,3],["STU0319","Himani","Khanna","F",20,"D005",2023,6,3],["STU0320","Samridhi","Kulkarni","F",22,"D003",2022,8,2],["STU0321","Meera","Joshi","F",18,"D001",2025,1,2],["STU0322","Amisha","Jain","F",19,"D002",2024,3,2],["STU0323","Dixita","Prajapati","F",20,"D002",2023,5,3],["STU0324","Komal","Paliwal","F",21,"D004",2022,7,3],["STU0325","Megha","Pandey","F",18,"D004",2025,2,3],["STU0326","Chirag","Saha","M",20,"D004",2023,6,3],["STU0327","Digvijay","Sharma","M",19,"D004",2024,4,1],["STU0328","Bhavesh","Deshmukh","M",18,"D005",2025,1,1],["STU0329","Aastha","Purohit","F",21,"D005",2022,7,3],["STU0330","Siya","Yadav","F",19,"D005",2024,4,3],["STU0331","Devesh","Ahuja","M",20,"D004",2023,5,4],["STU0332","Divyanshi","Sharma","F",22,"D003",2022,7,3],["STU0333","Niharika","Mukherjee","F",18,"D004",2025,2,2],["STU0334","Kusum","Patel","F",19,"D001",2024,3,2],["STU0335","Mahima","Arora","F",20,"D002",2023,6,4],["STU0336","Aditi","Rajput","F",21,"D004",2022,7,3],["STU0337","Urvashi","Roy","F",18,"D003",2025,2,3],["STU0338","Mansi","Iyer","F",19,"D003",2024,3,2],["STU0339","Sanya","Mahavar","F",20,"D005",2023,6,4],["STU0340","Apoorva","Rajput","F",18,"D001",2025,2,2],["STU0341","Aditi","Suri","F",21,"D004",2022,7,3],["STU0342","Om","Singh","M",19,"D001",2024,4,2],["STU0343","Nikhil","Paliwal","M",20,"D005",2023,5,2],["STU0344","Tanisha","Baghel","F",18,"D004",2025,1,2],["STU0345","Manvi","Bhadoria","F",22,"D004",2022,8,3],["STU0346","Anamika","Chatterjee","F",19,"D004",2024,3,3],["STU0347","Chetan","Prajapati","M",20,"D002",2023,5,3],["STU0348","Arjun","Parmar","M",21,"D004",2022,7,3],["STU0349","Alisha","Dubey","F",18,"D005",2025,1,3],["STU0350","Ansh","Tiwari","M",19,"D005",2024,4,1],["STU0351","Shivam","Banerjee","M",20,"D003",2023,5,2],["STU0352","Girish","Mukherjee","M",18,"D002",2025,2,2],["STU0353","Varun","Rawat","M",21,"D003",2022,8,1],["STU0354","Vivaan","Pandit","M",19,"D001",2024,4,1],["STU0355","Lakshay","Rana","M",20,"D001",2023,6,2],["STU0356","Vaishnavi","Bedi","F",18,"D001",2025,1,2],["STU0357","Parul","Tyagi","F",22,"D001",2022,8,2],["STU0358","Nandini","Pathak","F",19,"D005",2024,4,2],["STU0359","Dhruv","Mehta","M",20,"D003",2023,5,1],["STU0360","Preeti","Kapoor","F",21,"D002",2022,7,3],["STU0361","Rashmi","Solanki","F",18,"D003",2025,2,2],["STU0362","Hriday","Soni","M",19,"D005",2024,3,2],["STU0363","Alisha","Patel","F",20,"D003",2023,6,2],["STU0364","Vaishali","Deshmukh","F",18,"D005",2025,1,2],["STU0365","Gunjan","Goyal","F",21,"D005",2022,7,2],["STU0366","Nitin","Rana","M",19,"D003",2024,4,2],["STU0367","Sumit","Kapoor","M",20,"D004",2023,6,3],["STU0368","Bhavya","Solanki","F",22,"D003",2022,7,1],["STU0369","Arya","Srivastava","F",18,"D004",2025,2,1],["STU0370","Diya","Roy","F",19,"D001",2024,4,2],["STU0371","Charu","Juneja","F",20,"D001",2023,5,2],["STU0372","Kartik","Soni","M",18,"D002",2025,1,1],["STU0373","Aarohi","Ahuja","F",21,"D002",2022,8,3],["STU0374","Kavya","Chatterjee","F",19,"D005",2024,3,1],["STU0375","Prachi","Agrawal","F",20,"D003",2023,5,3],["STU0376","Arpita","Rajput","F",22,"D003",2022,8,3],["STU0377","Heena","Nair","F",18,"D001",2025,1,3],["STU0378","Swati","Pawar","F",19,"D003",2024,3,2],["STU0379","Sanjana","Bhatia","F",20,"D004",2023,6,2],["STU0380","Kritika","Sabharwal","F",21,"D005",2022,8,2],["STU0381","Kavyansh","Menon","M",18,"D001",2025,2,2],["STU0382","Manish","Pawar","M",20,"D005",2023,5,1],["STU0383","Vipul","Sengar","M",19,"D002",2024,4,2],["STU0384","Ishan","Chawla","M",18,"D001",2025,1,1],["STU0385","Ved","Chandel","M",21,"D001",2022,8,1],["STU0386","Ira","Sengar","F",19,"D005",2024,3,3],["STU0387","Mahima","Bose","F",20,"D002",2023,6,1],["STU0388","Riya","Kapoor","F",22,"D005",2022,8,3],["STU0389","Myra","Prasad","F",18,"D001",2025,2,2],["STU0390","Ritika","Sabharwal","F",19,"D003",2024,4,2],["STU0391","Om","Prasad","M",20,"D004",2023,5,2],["STU0392","Ashish","Dubey","M",18,"D003",2025,2,1],["STU0393","Tarun","Bedi","M",21,"D004",2022,8,1],["STU0394","Anirudh","Kale","M",19,"D004",2024,4,1],["STU0395","Arvind","Suri","M",20,"D001",2023,5,1]];
+const PERF = [["STU0001",4,8,11,23,"F","Fail",6,4.45],["STU0002",4,6,11,21,"F","Fail",4,4.24],["STU0003",5,10,18,33,"D","Pass",10,5.52],["STU0004",11,18,26,55,"B+","Pass",2,7.87],["STU0005",5,13,18,36,"D","Pass",4,5.84],["STU0006",11,19,26,56,"B+","Pass",10,7.97],["STU0007",9,15,19,43,"C","Pass",0,6.59],["STU0008",5,6,11,22,"F","Fail",6,4.35],["STU0009",12,23,33,68,"A+","Pass",0,9.25],["STU0010",11,19,26,56,"B+","Pass",0,7.97],["STU0011",8,10,16,34,"D","Pass",0,5.63],["STU0012",8,15,21,44,"C","Pass",4,6.69],["STU0013",11,18,25,54,"B+","Pass",2,7.76],["STU0014",8,13,19,40,"C","Pass",2,6.27],["STU0015",11,20,28,59,"B+","Pass",0,8.29],["STU0016",11,18,25,54,"B+","Pass",4,7.76],["STU0017",10,18,25,53,"B+","Pass",6,7.65],["STU0018",6,13,18,37,"D","Pass",4,5.95],["STU0019",5,6,9,20,"F","Fail",16,4.13],["STU0020",6,13,18,37,"D","Pass",4,5.95],["STU0021",10,18,26,54,"B+","Pass",0,7.76],["STU0022",9,19,26,54,"B+","Pass",0,7.76],["STU0023",11,19,28,58,"B+","Pass",2,8.19],["STU0024",10,16,21,47,"B","Pass",0,7.01],["STU0025",8,11,14,33,"D","Pass",2,5.52],["STU0026",5,11,14,30,"D","Pass",14,5.2],["STU0027",9,15,19,43,"C","Pass",2,6.59],["STU0028",11,20,26,57,"B+","Pass",4,8.08],["STU0029",8,14,19,41,"C","Pass",4,6.37],["STU0030",8,15,19,42,"C","Pass",16,6.48],["STU0031",7,14,21,42,"C","Pass",0,6.48],["STU0032",13,20,30,63,"A","Pass",0,8.72],["STU0033",13,20,28,61,"A","Pass",0,8.51],["STU0034",6,13,21,40,"C","Pass",0,6.27],["STU0035",9,18,26,53,"B+","Pass",0,7.65],["STU0036",6,9,11,26,"F","Fail",0,4.77],["STU0037",11,20,32,63,"A","Pass",2,8.72],["STU0038",11,20,26,57,"B+","Pass",7,8.08],["STU0039",9,15,19,43,"C","Pass",2,6.59],["STU0040",11,16,23,50,"B","Pass",8,7.33],["STU0041",5,13,19,37,"D","Pass",25,5.95],["STU0042",9,15,21,45,"B","Pass",8,6.8],["STU0043",14,23,32,69,"A+","Pass",2,9.36],["STU0044",6,10,19,35,"D","Pass",0,5.73],["STU0045",8,13,16,37,"D","Pass",14,5.95],["STU0046",6,10,11,27,"F","Fail",8,4.88],["STU0047",8,15,19,42,"C","Pass",12,6.48],["STU0048",14,24,35,73,"A+","Pass",4,9.79],["STU0049",11,19,25,55,"B+","Pass",2,7.87],["STU0050",5,9,12,26,"F","Fail",2,4.77],["STU0051",9,16,23,48,"B","Pass",2,7.12],["STU0052",8,16,23,47,"B","Pass",2,7.01],["STU0053",8,14,18,40,"C","Pass",6,6.27],["STU0054",6,13,19,38,"C","Pass",0,6.05],["STU0055",8,16,23,47,"B","Pass",6,7.01],["STU0056",6,11,18,35,"D","Pass",8,5.73],["STU0057",11,19,26,56,"B+","Pass",0,7.97],["STU0058",11,19,26,56,"B+","Pass",4,7.97],["STU0059",7,13,16,36,"D","Pass",2,5.84],["STU0060",11,20,28,59,"B+","Pass",2,8.29],["STU0061",8,14,19,41,"C","Pass",6,6.37],["STU0062",8,10,19,37,"D","Pass",6,5.95],["STU0063",6,13,16,35,"D","Pass",4,5.73],["STU0064",8,11,16,35,"D","Pass",2,5.73],["STU0065",8,13,18,39,"C","Pass",0,6.16],["STU0066",12,19,26,57,"B+","Pass",2,8.08],["STU0067",10,16,21,47,"B","Pass",4,7.01],["STU0068",5,9,11,25,"F","Fail",4,4.67],["STU0069",6,11,14,31,"D","Pass",2,5.31],["STU0070",12,20,28,60,"A","Pass",12,8.4],["STU0071",10,19,26,55,"B+","Pass",0,7.87],["STU0072",8,13,18,39,"C","Pass",0,6.16],["STU0073",6,8,9,23,"F","Fail",2,4.45],["STU0074",9,15,25,49,"B","Pass",2,7.23],["STU0075",8,15,19,42,"C","Pass",54,6.48],["STU0076",7,11,18,36,"D","Pass",6,5.84],["STU0077",8,14,18,40,"C","Pass",8,6.27],["STU0078",8,14,19,41,"C","Pass",0,6.37],["STU0079",6,10,18,34,"D","Pass",2,5.63],["STU0080",4,6,9,19,"F","Fail",12,4.03],["STU0081",8,15,21,44,"C","Pass",2,6.69],["STU0082",8,13,19,40,"C","Pass",4,6.27],["STU0083",5,8,11,24,"F","Fail",10,4.56],["STU0084",11,19,26,56,"B+","Pass",4,7.97],["STU0085",7,13,18,38,"C","Pass",2,6.05],["STU0086",5,11,14,30,"D","Pass",6,5.2],["STU0087",6,9,11,26,"F","Fail",4,4.77],["STU0088",10,18,25,53,"B+","Pass",4,7.65],["STU0089",8,13,18,39,"C","Pass",12,6.16],["STU0090",6,8,12,26,"F","Fail",18,4.77],["STU0091",5,9,14,28,"F","Fail",0,4.99],["STU0092",12,21,32,65,"A","Pass",4,8.93],["STU0093",5,8,11,24,"F","Fail",4,4.56],["STU0094",8,13,18,39,"C","Pass",0,6.16],["STU0095",8,16,25,49,"B","Pass",6,7.23],["STU0096",5,13,18,36,"D","Pass",2,5.84],["STU0097",8,19,26,53,"B+","Pass",2,7.65],["STU0098",6,11,18,35,"D","Pass",2,5.73],["STU0099",8,18,25,51,"B","Pass",6,7.44],["STU0100",5,11,14,30,"D","Pass",0,5.2],["STU0101",5,9,9,23,"F","Fail",14,4.45],["STU0102",12,21,30,63,"A","Pass",0,8.72],["STU0103",8,16,25,49,"B","Pass",4,7.23],["STU0104",5,8,11,24,"F","Fail",26,4.56],["STU0105",12,23,32,67,"A","Pass",0,9.15],["STU0106",8,14,19,41,"C","Pass",10,6.37],["STU0107",5,10,14,29,"F","Fail",8,5.09],["STU0108",12,23,32,67,"A","Pass",2,9.15],["STU0109",8,16,23,47,"B","Pass",6,7.01],["STU0110",11,19,28,58,"B+","Pass",4,8.19],["STU0111",14,24,33,71,"A+","Pass",6,9.57],["STU0112",5,13,18,36,"D","Pass",0,5.84],["STU0113",8,16,23,47,"B","Pass",6,7.01],["STU0114",14,24,33,71,"A+","Pass",10,9.57],["STU0115",7,11,16,34,"D","Pass",8,5.63],["STU0116",11,19,28,58,"B+","Pass",2,8.19],["STU0117",8,16,25,49,"B","Pass",2,7.23],["STU0118",10,18,23,51,"B","Pass",0,7.44],["STU0119",7,9,14,30,"D","Pass",20,5.2],["STU0120",11,16,23,50,"B","Pass",6,7.33],["STU0121",12,19,26,57,"B+","Pass",2,8.08],["STU0122",12,18,26,56,"B+","Pass",6,7.97],["STU0123",10,16,23,49,"B","Pass",2,7.23],["STU0124",11,14,23,48,"B","Pass",18,7.12],["STU0125",6,9,14,29,"F","Fail",0,5.09],["STU0126",10,16,21,47,"B","Pass",0,7.01],["STU0127",5,13,19,37,"D","Pass",0,5.95],["STU0128",5,10,16,31,"D","Pass",2,5.31],["STU0129",5,5,0,10,"F","Fail",0,3.07],["STU0130",14,23,32,69,"A+","Pass",8,9.36],["STU0131",9,0,0,9,"F","Fail",0,2.96],["STU0132",6,0,0,6,"F","Fail",0,2.64],["STU0133",8,16,21,45,"B","Pass",12,6.8],["STU0134",9,14,19,42,"C","Pass",16,6.48],["STU0135",7,0,0,7,"F","Fail",0,2.75],["STU0136",8,0,0,8,"F","Fail",0,2.85],["STU0137",8,0,0,8,"F","Fail",0,2.85],["STU0138",3,0,0,3,"F","Fail",0,2.32],["STU0139",11,15,21,47,"B","Pass",0,7.01],["STU0140",12,20,26,58,"B+","Pass",0,8.19],["STU0141",5,11,0,16,"F","Fail",0,3.71],["STU0142",7,11,16,34,"D","Pass",8,5.63],["STU0143",7,14,19,40,"C","Pass",2,6.27],["STU0144",11,18,23,52,"B","Pass",2,7.55],["STU0145",4,0,0,4,"F","Fail",0,2.43],["STU0146",6,14,19,39,"C","Pass",0,6.16],["STU0147",5,9,0,14,"F","Fail",0,3.49],["STU0148",8,14,19,41,"C","Pass",2,6.37],["STU0149",5,8,0,13,"F","Fail",0,3.39],["STU0150",6,11,18,35,"D","Pass",0,5.73],["STU0151",5,6,0,11,"F","Fail",0,3.17],["STU0152",9,16,25,50,"B","Pass",6,7.33],["STU0153",8,13,18,39,"C","Pass",8,6.16],["STU0154",4,0,0,4,"F","Fail",0,2.43],["STU0155",8,14,21,43,"C","Pass",0,6.59],["STU0156",8,10,14,32,"D","Pass",2,5.41],["STU0157",12,15,23,50,"B","Pass",8,7.33],["STU0158",7,10,18,35,"D","Pass",6,5.73],["STU0159",13,19,26,58,"B+","Pass",2,8.19],["STU0160",8,15,21,44,"C","Pass",4,6.69],["STU0161",5,8,0,13,"F","Fail",0,3.39],["STU0162",4,11,12,27,"F","Fail",6,4.88],["STU0163",5,0,0,5,"F","Fail",0,2.53],["STU0164",8,13,18,39,"C","Pass",2,6.16],["STU0165",4,10,12,26,"F","Fail",0,4.77],["STU0166",9,14,21,44,"C","Pass",16,6.69],["STU0167",8,13,18,39,"C","Pass",4,6.16],["STU0168",11,19,28,58,"B+","Pass",0,8.19],["STU0169",5,9,0,14,"F","Fail",0,3.49],["STU0170",11,18,25,54,"B+","Pass",0,7.76],["STU0171",5,6,0,11,"F","Fail",0,3.17],["STU0172",10,19,28,57,"B+","Pass",2,8.08],["STU0173",10,14,18,42,"C","Pass",0,6.48],["STU0174",6,9,0,15,"F","Fail",0,3.6],["STU0175",8,14,16,38,"C","Pass",4,6.05],["STU0176",8,11,16,35,"D","Pass",4,5.73],["STU0177",10,16,19,45,"B","Pass",2,6.8],["STU0178",5,6,11,22,"F","Fail",4,4.35],["STU0179",8,10,16,34,"D","Pass",10,5.63],["STU0180",8,13,19,40,"C","Pass",4,6.27],["STU0181",7,10,14,31,"D","Pass",10,5.31],["STU0182",9,16,21,46,"B","Pass",2,6.91],["STU0183",12,21,30,63,"A","Pass",0,8.72],["STU0184",7,11,14,32,"D","Pass",56,5.41],["STU0185",9,16,21,46,"B","Pass",14,6.91],["STU0186",9,15,19,43,"C","Pass",12,6.59],["STU0187",8,15,19,42,"C","Pass",2,6.48],["STU0188",11,19,26,56,"B+","Pass",0,7.97],["STU0189",6,9,16,31,"D","Pass",6,5.31],["STU0190",6,11,18,35,"D","Pass",4,5.73],["STU0191",8,15,23,46,"B","Pass",10,6.91],["STU0192",6,10,16,32,"D","Pass",0,5.41],["STU0193",5,10,14,29,"F","Fail",12,5.09],["STU0194",6,11,18,35,"D","Pass",8,5.73],["STU0195",10,18,25,53,"B+","Pass",0,7.65],["STU0196",11,19,26,56,"B+","Pass",0,7.97],["STU0197",13,19,28,60,"A","Pass",4,8.4],["STU0198",7,11,18,36,"D","Pass",8,5.84],["STU0199",14,23,32,69,"A+","Pass",24,9.36],["STU0200",7,11,18,36,"D","Pass",0,5.84],["STU0201",12,20,28,60,"A","Pass",2,8.4],["STU0202",6,13,18,37,"D","Pass",6,5.95],["STU0203",7,11,18,36,"D","Pass",4,5.84],["STU0204",5,8,11,24,"F","Fail",18,4.56],["STU0205",8,13,19,40,"C","Pass",6,6.27],["STU0206",8,11,16,35,"D","Pass",28,5.73],["STU0207",5,9,12,26,"F","Fail",5,4.77],["STU0208",8,15,23,46,"B","Pass",10,6.91],["STU0209",7,11,18,36,"D","Pass",6,5.84],["STU0210",5,9,12,26,"F","Fail",6,4.77],["STU0211",6,10,14,30,"D","Pass",10,5.2],["STU0212",9,15,23,47,"B","Pass",13,7.01],["STU0213",9,16,25,50,"B","Pass",0,7.33],["STU0214",5,9,14,28,"F","Fail",15,4.99],["STU0215",6,13,18,37,"D","Pass",12,5.95],["STU0216",11,19,26,56,"B+","Pass",2,7.97],["STU0217",5,8,7,20,"F","Fail",22,4.13],["STU0218",5,8,14,27,"F","Fail",13,4.88],["STU0219",5,9,14,28,"F","Fail",3,4.99],["STU0220",7,13,18,38,"C","Pass",4,6.05],["STU0221",5,8,11,24,"F","Fail",2,4.56],["STU0222",5,6,0,11,"F","Fail",0,3.17],["STU0223",12,20,30,62,"A","Pass",2,8.61],["STU0224",9,16,23,48,"B","Pass",0,7.12],["STU0225",10,16,25,51,"B","Pass",0,7.44],["STU0226",7,10,12,29,"F","Fail",16,5.09],["STU0227",12,19,26,57,"B+","Pass",10,8.08],["STU0228",9,14,21,44,"C","Pass",2,6.69],["STU0229",8,10,16,34,"D","Pass",14,5.63],["STU0230",9,13,21,43,"C","Pass",10,6.59],["STU0231",10,16,25,51,"B","Pass",14,7.44],["STU0232",8,14,19,41,"C","Pass",4,6.37],["STU0233",8,11,16,35,"D","Pass",14,5.73],["STU0234",11,16,23,50,"B","Pass",2,7.33],["STU0235",7,9,11,27,"F","Fail",18,4.88],["STU0236",8,11,18,37,"D","Pass",10,5.95],["STU0237",11,16,23,50,"B","Pass",4,7.33],["STU0238",10,15,21,46,"B","Pass",20,6.91],["STU0239",10,14,19,43,"C","Pass",2,6.59],["STU0240",5,9,0,14,"F","Fail",0,3.49],["STU0241",9,15,21,45,"B","Pass",14,6.8],["STU0242",8,14,21,43,"C","Pass",2,6.59],["STU0243",5,0,0,5,"F","Fail",0,2.53],["STU0244",10,15,21,46,"B","Pass",0,6.91],["STU0245",5,0,0,5,"F","Fail",0,2.53],["STU0246",14,23,32,69,"A+","Pass",6,9.36],["STU0247",9,15,23,47,"B","Pass",4,7.01],["STU0248",5,10,14,29,"F","Fail",16,5.09],["STU0249",2,6,9,17,"F","Fail",8,3.81],["STU0250",10,19,26,55,"B+","Pass",0,7.87],["STU0251",5,10,14,29,"F","Fail",0,5.09],["STU0252",5,13,18,36,"D","Pass",6,5.84],["STU0253",5,11,14,30,"D","Pass",4,5.2],["STU0254",6,11,14,31,"D","Pass",0,5.31],["STU0255",6,15,21,42,"C","Pass",0,6.48],["STU0256",5,11,14,30,"D","Pass",2,5.2],["STU0257",11,15,23,49,"B","Pass",6,7.23],["STU0258",8,14,19,41,"C","Pass",12,6.37],["STU0259",11,18,25,54,"B+","Pass",8,7.76],["STU0260",8,11,0,19,"F","Fail",0,4.03],["STU0261",13,23,32,68,"A+","Pass",21,9.25],["STU0262",6,10,14,30,"D","Pass",2,5.2],["STU0263",10,15,21,46,"B","Pass",1,6.91],["STU0264",8,11,16,35,"D","Pass",4,5.73],["STU0265",7,13,0,20,"F","Fail",0,4.13],["STU0266",13,21,30,64,"A","Pass",13,8.83],["STU0267",7,11,18,36,"D","Pass",2,5.84],["STU0268",9,13,19,41,"C","Pass",8,6.37],["STU0269",8,11,18,37,"D","Pass",10,5.95],["STU0270",5,0,0,5,"F","Fail",0,2.53],["STU0271",7,11,16,34,"D","Pass",15,5.63],["STU0272",11,18,25,54,"B+","Pass",4,7.76],["STU0273",8,14,19,41,"C","Pass",2,6.37],["STU0274",11,18,25,54,"B+","Pass",2,7.76],["STU0275",8,13,18,39,"C","Pass",2,6.16],["STU0276",9,15,21,45,"B","Pass",6,6.8],["STU0277",8,11,16,35,"D","Pass",75,5.73],["STU0278",7,11,16,34,"D","Pass",22,5.63],["STU0279",7,10,14,31,"D","Pass",15,5.31],["STU0280",8,14,18,40,"C","Pass",8,6.27],["STU0281",6,10,14,30,"D","Pass",30,5.2],["STU0282",8,11,18,37,"D","Pass",19,5.95],["STU0283",9,15,21,45,"B","Pass",1,6.8],["STU0284",6,11,18,35,"D","Pass",4,5.73],["STU0285",8,11,19,38,"C","Pass",4,6.05],["STU0286",9,13,19,41,"C","Pass",2,6.37],["STU0287",14,23,33,70,"A+","Pass",5,9.47],["STU0288",10,15,21,46,"B","Pass",6,6.91],["STU0289",11,18,25,54,"B+","Pass",6,7.76],["STU0290",11,16,26,53,"B+","Pass",9,7.65],["STU0291",9,14,19,42,"C","Pass",11,6.48],["STU0292",11,19,26,56,"B+","Pass",0,7.97],["STU0293",9,15,23,47,"B","Pass",12,7.01],["STU0294",14,23,32,69,"A+","Pass",6,9.36],["STU0295",11,16,25,52,"B","Pass",8,7.55],["STU0296",11,15,19,45,"B","Pass",4,6.8],["STU0297",8,11,0,19,"F","Fail",0,4.03],["STU0298",8,10,14,32,"D","Pass",10,5.41],["STU0299",11,16,25,52,"B","Pass",0,7.55],["STU0300",12,19,28,59,"B+","Pass",5,8.29],["STU0301",9,13,19,41,"C","Pass",14,6.37],["STU0302",8,14,18,40,"C","Pass",0,6.27],["STU0303",11,15,25,51,"B","Pass",0,7.44],["STU0304",13,21,32,66,"A","Pass",0,9.04],["STU0305",11,18,23,52,"B","Pass",20,7.55],["STU0306",11,15,21,47,"B","Pass",8,7.01],["STU0307",13,23,32,68,"A+","Pass",0,9.25],["STU0308",6,11,14,31,"D","Pass",38,5.31],["STU0309",11,15,21,47,"B","Pass",0,7.01],["STU0310",9,13,18,40,"C","Pass",18,6.27],["STU0311",7,11,0,18,"F","Fail",0,3.92],["STU0312",11,15,23,49,"B","Pass",20,7.23],["STU0313",10,14,19,43,"C","Pass",3,6.59],["STU0314",10,13,19,42,"C","Pass",22,6.48],["STU0315",11,16,23,50,"B","Pass",14,7.33],["STU0316",10,14,19,43,"C","Pass",40,6.59],["STU0317",6,10,0,16,"F","Fail",0,3.71],["STU0318",7,13,16,36,"D","Pass",9,5.84],["STU0319",8,14,18,40,"C","Pass",0,6.27],["STU0320",8,14,19,41,"C","Pass",2,6.37],["STU0321",10,16,23,49,"B","Pass",23,7.23],["STU0322",8,11,16,35,"D","Pass",12,5.73],["STU0323",8,14,19,41,"C","Pass",3,6.37],["STU0324",9,18,26,53,"B+","Pass",1,7.65],["STU0325",12,19,26,57,"B+","Pass",0,8.08],["STU0326",7,15,19,41,"C","Pass",3,6.37],["STU0327",11,19,28,58,"B+","Pass",3,8.19],["STU0328",8,13,18,39,"C","Pass",8,6.16],["STU0329",8,11,16,35,"D","Pass",7,5.73],["STU0330",11,18,25,54,"B+","Pass",4,7.76],["STU0331",7,10,14,31,"D","Pass",2,5.31],["STU0332",9,18,25,52,"B","Pass",7,7.55],["STU0333",5,0,0,5,"F","Fail",0,2.53],["STU0334",6,10,0,16,"F","Fail",0,3.71],["STU0335",8,11,0,19,"F","Fail",0,4.03],["STU0336",12,19,26,57,"B+","Pass",16,8.08],["STU0337",11,16,23,50,"B","Pass",12,7.33],["STU0338",5,10,0,15,"F","Fail",0,3.6],["STU0339",12,19,30,61,"A","Pass",7,8.51],["STU0340",7,13,18,38,"C","Pass",4,6.05],["STU0341",8,15,19,42,"C","Pass",4,6.48],["STU0342",8,13,0,21,"F","Fail",0,4.24],["STU0343",12,19,26,57,"B+","Pass",11,8.08],["STU0344",7,10,0,17,"F","Fail",0,3.81],["STU0345",8,13,18,39,"C","Pass",4,6.16],["STU0346",10,16,25,51,"B","Pass",7,7.44],["STU0347",12,19,28,59,"B+","Pass",9,8.29],["STU0348",8,13,16,37,"D","Pass",0,5.95],["STU0349",10,19,26,55,"B+","Pass",0,7.87],["STU0350",8,16,23,47,"B","Pass",10,7.01],["STU0351",6,9,14,29,"F","Fail",8,5.09],["STU0352",10,16,23,49,"B","Pass",2,7.23],["STU0353",6,9,14,29,"F","Fail",7,5.09],["STU0354",6,10,14,30,"D","Pass",4,5.2],["STU0355",10,14,19,43,"C","Pass",4,6.59],["STU0356",8,11,16,35,"D","Pass",0,5.73],["STU0357",9,16,23,48,"B","Pass",4,7.12],["STU0358",9,15,19,43,"C","Pass",2,6.59],["STU0359",8,13,18,39,"C","Pass",4,6.16],["STU0360",14,20,28,62,"A","Pass",0,8.61],["STU0361",10,16,23,49,"B","Pass",0,7.23],["STU0362",10,15,21,46,"B","Pass",2,6.91],["STU0363",8,14,18,40,"C","Pass",0,6.27],["STU0364",12,19,26,57,"B+","Pass",0,8.08],["STU0365",9,14,21,44,"C","Pass",0,6.69],["STU0366",8,13,18,39,"C","Pass",4,6.16],["STU0367",10,16,23,49,"B","Pass",0,7.23],["STU0368",5,8,0,13,"F","Fail",0,3.39],["STU0369",8,13,18,39,"C","Pass",0,6.16],["STU0370",11,15,19,45,"B","Pass",10,6.8],["STU0371",5,9,16,30,"D","Pass",4,5.2],["STU0372",11,15,21,47,"B","Pass",3,7.01],["STU0373",10,14,19,43,"C","Pass",8,6.59],["STU0374",5,6,9,20,"F","Fail",14,4.13],["STU0375",14,23,33,70,"A+","Pass",0,9.47],["STU0376",6,10,18,34,"D","Pass",2,5.63],["STU0377",11,18,26,55,"B+","Pass",4,7.87],["STU0378",6,11,18,35,"D","Pass",4,5.73],["STU0379",11,19,26,56,"B+","Pass",0,7.97],["STU0380",8,13,18,39,"C","Pass",17,6.16],["STU0381",11,18,25,54,"B+","Pass",4,7.76],["STU0382",5,8,12,25,"F","Fail",5,4.67],["STU0383",8,14,18,40,"C","Pass",2,6.27],["STU0384",5,6,0,11,"F","Fail",0,3.17],["STU0385",5,6,9,20,"F","Fail",14,4.13],["STU0386",8,11,18,37,"D","Pass",2,5.95],["STU0387",5,6,11,22,"F","Fail",7,4.35],["STU0388",5,6,0,11,"F","Fail",0,3.17],["STU0389",5,11,14,30,"D","Pass",0,5.2],["STU0390",5,6,0,11,"F","Fail",0,3.17],["STU0391",7,11,16,34,"D","Pass",11,5.63],["STU0392",11,20,28,59,"B+","Pass",3,8.29],["STU0393",8,10,12,30,"D","Pass",3,5.2],["STU0394",8,15,18,41,"C","Pass",0,6.37],["STU0395",6,11,16,33,"D","Pass",5,5.52]];
+
+const COLORS = { navy:'#16213E', navy2:'#212F52', brass:'#B08D57', brassDark:'#8C6D3F', good:'#3F7A5D', bad:'#A13D3D', line:'#E2E4EA', muted:'#5B6478' };
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = COLORS.muted;
+
+const deptName = id => (DEPARTMENTS.find(d => d[0] === id) || [id, id])[1];
+const round2 = n => Math.round(n * 100) / 100;
+
+// index performance by studentId for quick lookup
+const perfByStudent = new Map(PERF.map(p => [p[0], p]));
+const studentsByDept = deptId => STUDENTS.filter(s => s[5] === deptId);
+
+function joined(){
+  return STUDENTS.map(s => {
+    const p = perfByStudent.get(s[0]);
+    return {
+      id:s[0], first:s[1], last:s[2], gender:s[3], age:s[4], deptId:s[5],
+      admissionYear:s[6], semester:s[7], studyHours:s[8],
+      exam1:p?.[1], exam2:p?.[2], finalExam:p?.[3], totalMarks:p?.[4],
+      grade:p?.[5], result:p?.[6], absences:p?.[7], cgpa:p?.[8]
+    };
+  });
+}
+const ALL = joined();
+
+function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
+
+function el(tag, cls, html){
+  const e = document.createElement(tag);
+  if(cls) e.className = cls;
+  if(html !== undefined) e.innerHTML = html;
+  return e;
+}
+function gradeClass(g){ return 'g-' + g.replace('+','plus'); }
+function rankBadge(rnk){
+  const cls = rnk === 1 ? 'rank-1' : rnk === 2 ? 'rank-2' : rnk === 3 ? 'rank-3' : 'rank-n';
+  return `<span class="rank-badge ${cls}">${rnk}</span>`;
+}
+
+/* ---- nav ---- */
+document.querySelectorAll('.navitem').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.navitem').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('sec-' + btn.dataset.section).classList.add('active');
+  });
+});
+
+/* ==================== OVERVIEW ==================== */
+function renderOverview(){
+  const cgpas = ALL.map(a => a.cgpa);
+  const overallAvgCgpa = round2(avg(cgpas));
+  const passCount = ALL.filter(a => a.result === 'Pass').length;
+  const passRate = round2(100 * passCount / ALL.length);
+  const avgAbsences = round2(avg(ALL.map(a => a.absences)));
+  const atRisk = ALL.filter(a => a.result === 'Fail' || a.absences > 15).length;
+
+  const wrap = document.getElementById('overview-stats');
+  wrap.innerHTML = '';
+  const chips = [
+    [STUDENTS.length, 'Students Tracked', ''],
+    [DEPARTMENTS.length, 'Departments', ''],
+    [COURSES.length, 'Courses', ''],
+    [TEACHERS.length, 'Faculty', ''],
+    [overallAvgCgpa, 'Overall Avg CGPA', ''],
+    [passRate + '%', 'Pass Rate', 'good'],
+    [avgAbsences, 'Avg Absences / Student', ''],
+    [atRisk, 'At-Risk Students', 'bad'],
+  ];
+  chips.forEach(([v,l,cls]) => {
+    const c = el('div','stat-chip ' + cls, `<div class="v">${v}</div><div class="l">${l}</div>`);
+    wrap.appendChild(c);
+  });
+
+  const deptStats = DEPARTMENTS.map(([id,name]) => {
+    const rows = ALL.filter(a => a.deptId === id);
+    return { name, avgCgpa: round2(avg(rows.map(r => r.cgpa))) };
+  });
+
+  new Chart(document.getElementById('overviewDeptChart'), {
+    type:'bar',
+    data:{ labels: deptStats.map(d=>d.name), datasets:[{ label:'Avg CGPA', data: deptStats.map(d=>d.avgCgpa), backgroundColor: COLORS.navy2, borderRadius:5, maxBarThickness:56 }] },
+    options:{ plugins:{legend:{display:false}}, scales:{ y:{ min:0, max:10, grid:{color:COLORS.line} }, x:{ grid:{display:false}, ticks:{ callback:function(v){ const l=this.getLabelForValue(v); return l.length>14 ? l.slice(0,14)+'…' : l; } } } } }
+  });
+
+  const gradeOrder = ['A+','A','B+','B','C','D','F'];
+  const gradeCounts = gradeOrder.map(g => ALL.filter(a => a.grade === g).length);
+  new Chart(document.getElementById('overviewGradeChart'), {
+    type:'doughnut',
+    data:{ labels: gradeOrder, datasets:[{ data: gradeCounts, backgroundColor:['#3F7A5D','#5C9C7A','#8FAE5E','#D8C6A6','#B08D57','#C97B4F','#A13D3D'] }] },
+    options:{ plugins:{ legend:{ position:'bottom', labels:{ boxWidth:12, font:{size:11} } } }, cutout:'55%' }
+  });
+}
+
+/* ==================== DEPARTMENT ==================== */
+function fillDeptSelects(){
+  ['deptSelect','courseDeptFilter','dirDeptFilter'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '';
+    if(id !== 'deptSelect'){ const o = el('option'); o.value='all'; o.textContent='All Departments'; sel.appendChild(o); }
+    DEPARTMENTS.forEach(([did,name]) => { const o = el('option'); o.value = did; o.textContent = name; sel.appendChild(o); });
+  });
+}
+
+let deptCompareChartRef, deptGenderChartRef;
+function renderDepartment(){
+  const deptId = document.getElementById('deptSelect').value;
+  const rows = ALL.filter(a => a.deptId === deptId);
+  const cgpa = round2(avg(rows.map(r=>r.cgpa)));
+  const passRate = round2(100 * rows.filter(r=>r.result==='Pass').length / rows.length);
+
+  document.getElementById('deptStuChip').innerHTML = `<div class="v">${rows.length}</div><div class="l">enrolled</div>`;
+  document.getElementById('deptCgpaChip').innerHTML = `<div class="v">${cgpa}</div><div class="l">out of 10</div>`;
+  document.getElementById('deptPassChip').innerHTML = `<div class="v" style="color:${passRate>=80?COLORS.good:COLORS.bad}">${passRate}%</div><div class="l">${rows.filter(r=>r.result==='Pass').length} of ${rows.length}</div>`;
+
+  const deptStats = DEPARTMENTS.map(([id,name]) => {
+    const r = ALL.filter(a => a.deptId === id);
+    return { name, avgCgpa: round2(avg(r.map(x=>x.cgpa))), passRate: round2(100*r.filter(x=>x.result==='Pass').length/r.length) };
+  });
+
+  if(deptCompareChartRef) deptCompareChartRef.destroy();
+  deptCompareChartRef = new Chart(document.getElementById('deptCompareChart'), {
+    type:'bar',
+    data:{ labels: deptStats.map(d=>d.name), datasets:[
+      { label:'Avg CGPA (x10)', data: deptStats.map(d=>d.avgCgpa*10), backgroundColor: COLORS.navy2, borderRadius:5 },
+      { label:'Pass Rate %', data: deptStats.map(d=>d.passRate), backgroundColor: COLORS.brass, borderRadius:5 },
+    ]},
+    options:{ plugins:{legend:{position:'bottom'}}, scales:{ y:{ max:100, grid:{color:COLORS.line} }, x:{ grid:{display:false}, ticks:{ callback:function(v){ const l=this.getLabelForValue(v); return l.length>12 ? l.slice(0,12)+'…' : l; } } } } }
+  });
+
+  const genderCounts = { F: rows.filter(r=>r.gender==='F').length, M: rows.filter(r=>r.gender==='M').length };
+  if(deptGenderChartRef) deptGenderChartRef.destroy();
+  deptGenderChartRef = new Chart(document.getElementById('deptGenderChart'), {
+    type:'bar',
+    data:{ labels:['Female','Male'], datasets:[{ label:'Students', data:[genderCounts.F, genderCounts.M], backgroundColor:[COLORS.brass, COLORS.navy2], borderRadius:6, maxBarThickness:70 }] },
+    options:{ plugins:{legend:{display:false}}, scales:{ y:{ grid:{color:COLORS.line} }, x:{ grid:{display:false} } } }
+  });
+
+  const avgAbs = round2(avg(rows.map(r=>r.absences)));
+  const topRow = rows.slice().sort((a,b)=>b.cgpa-a.cgpa)[0];
+  document.getElementById('deptInsight').innerHTML =
+    `<div><b>Reading this:</b> ${deptName(deptId)} carries ${rows.length} students at an average CGPA of ${cgpa} ` +
+    `and a ${passRate}% pass rate, with ${avgAbs} average absences. Top performer: <b>${topRow.first} ${topRow.last}</b> ` +
+    `(${topRow.id}) at ${topRow.cgpa} CGPA.</div>`;
+}
+
+/* ==================== GRADES ==================== */
+let marksHistRef, scatterRef, stackRef;
+function renderGrades(){
+  const bins = [[0,10],[10,20],[20,30],[30,40],[40,50],[50,60],[60,73]];
+  const counts = bins.map(([lo,hi]) => ALL.filter(a => a.totalMarks >= lo && (hi===73 ? a.totalMarks<=hi : a.totalMarks<hi)).length);
+  if(marksHistRef) marksHistRef.destroy();
+  marksHistRef = new Chart(document.getElementById('marksHistChart'), {
+    type:'bar',
+    data:{ labels: bins.map(([lo,hi])=>`${lo}-${hi}`), datasets:[{ label:'Students', data: counts, backgroundColor: COLORS.navy2, borderRadius:5 }] },
+    options:{ plugins:{legend:{display:false}}, scales:{ y:{ grid:{color:COLORS.line} }, x:{ title:{display:true,text:'Total Marks (/73)'}, grid:{display:false} } } }
+  });
+
+  if(scatterRef) scatterRef.destroy();
+  const passPts = ALL.filter(a=>a.result==='Pass').map(a => ({x:a.absences, y:a.cgpa}));
+  const failPts = ALL.filter(a=>a.result==='Fail').map(a => ({x:a.absences, y:a.cgpa}));
+  scatterRef = new Chart(document.getElementById('scatterChart'), {
+    type:'scatter',
+    data:{ datasets:[
+      { label:'Pass', data:passPts, backgroundColor:'rgba(63,122,93,0.55)', pointRadius:4 },
+      { label:'Fail', data:failPts, backgroundColor:'rgba(161,61,61,0.6)', pointRadius:4 },
+    ]},
+    options:{ plugins:{legend:{position:'bottom'}}, scales:{ x:{ title:{display:true,text:'Absences'}, grid:{color:COLORS.line} }, y:{ title:{display:true,text:'CGPA'}, grid:{color:COLORS.line} } } }
+  });
+
+  const deptStack = DEPARTMENTS.map(([id,name]) => {
+    const r = ALL.filter(a=>a.deptId===id);
+    return { name, pass:r.filter(x=>x.result==='Pass').length, fail:r.filter(x=>x.result==='Fail').length };
+  });
+  if(stackRef) stackRef.destroy();
+  stackRef = new Chart(document.getElementById('passFailStackChart'), {
+    type:'bar',
+    data:{ labels: deptStack.map(d=>d.name), datasets:[
+      { label:'Pass', data: deptStack.map(d=>d.pass), backgroundColor: COLORS.good, stack:'s' },
+      { label:'Fail', data: deptStack.map(d=>d.fail), backgroundColor: COLORS.bad, stack:'s' },
+    ]},
+    options:{ plugins:{legend:{position:'bottom'}}, scales:{ x:{ stacked:true, grid:{display:false} }, y:{ stacked:true, grid:{color:COLORS.line} } } }
+  });
+
+  const failCount = ALL.filter(a=>a.result==='Fail').length;
+  document.getElementById('gradesInsight').innerHTML =
+    `<div><b>Reading this:</b> ${failCount} of ${ALL.length} students (${round2(100*failCount/ALL.length)}%) are failing. ` +
+    `The CGPA-vs-absences scatter shows failing students cluster at higher absence counts — attendance is the ` +
+    `single strongest visible risk signal in this dataset.</div>`;
+}
+
+/* ==================== RISK ==================== */
+function renderRisk(){
+  const topN = ALL.slice().sort((a,b)=>b.cgpa-a.cgpa).slice(0,10);
+  const topThead = document.querySelector('#topTable thead');
+  const topTbody = document.querySelector('#topTable tbody');
+  topThead.innerHTML = '<tr><th>Rank</th><th>Student</th><th>Dept</th><th class="num">CGPA</th><th>Grade</th></tr>';
+  topTbody.innerHTML = topN.map((r,i) => `<tr><td>${rankBadge(i+1)}</td><td>${r.first} ${r.last}<br><span style="color:var(--muted);font-size:11px;">${r.id}</span></td><td>${deptName(r.deptId)}</td><td class="num">${r.cgpa}</td><td><span class="grade-pill ${gradeClass(r.grade)}">${r.grade}</span></td></tr>`).join('');
+
+  const atRisk = ALL.filter(a => a.result === 'Fail').slice().sort((a,b)=>b.absences-a.absences);
+  const riskThead = document.querySelector('#riskTable thead');
+  const riskTbody = document.querySelector('#riskTable tbody');
+  riskThead.innerHTML = '<tr><th>Student</th><th>Dept</th><th class="num">Total Marks</th><th class="num">Absences</th><th class="num">CGPA</th></tr>';
+  riskTbody.innerHTML = atRisk.map(r => `<tr><td>${r.first} ${r.last}<br><span style="color:var(--muted);font-size:11px;">${r.id}</span></td><td>${deptName(r.deptId)}</td><td class="num">${r.totalMarks}</td><td class="num" style="color:var(--bad);font-weight:600;">${r.absences}</td><td class="num">${r.cgpa}</td></tr>`).join('');
+
+  document.getElementById('riskInsight').innerHTML =
+    `<div><b>Action point:</b> ${atRisk.length} students are currently failing. The ${atRisk.filter(a=>a.absences>15).length} ` +
+    `with more than 15 absences are the highest-priority interventions — attendance counselling before remedial ` +
+    `classes is likely to have the bigger impact for this group.</div>`;
+}
+
+/* ==================== COURSES ==================== */
+function renderCourses(){
+  const filterDept = document.getElementById('courseDeptFilter').value;
+  const rows = COURSES.filter(c => filterDept === 'all' || c[2] === filterDept);
+  const thead = document.querySelector('#courseTable thead');
+  const tbody = document.querySelector('#courseTable tbody');
+  thead.innerHTML = '<tr><th>Course ID</th><th>Course Name</th><th>Department</th><th>Faculty</th><th class="num">Credits</th></tr>';
+  tbody.innerHTML = rows.map(([cid,name,did,tid,credits]) => {
+    const teacher = TEACHERS.find(t => t[0] === tid);
+    return `<tr><td>${cid}</td><td>${name}</td><td>${deptName(did)}</td><td>${teacher ? teacher[1] : '—'}</td><td class="num">${credits}</td></tr>`;
+  }).join('');
+
+  const facultyCounts = DEPARTMENTS.map(([id,name]) => ({ name, count: TEACHERS.filter(t=>t[2]===id).length }));
+  if(window._facultyChart) window._facultyChart.destroy();
+  window._facultyChart = new Chart(document.getElementById('facultyChart'), {
+    type:'bar',
+    data:{ labels: facultyCounts.map(f=>f.name), datasets:[{ label:'Faculty', data: facultyCounts.map(f=>f.count), backgroundColor: COLORS.brass, borderRadius:6, maxBarThickness:60 }] },
+    options:{ indexAxis:'y', plugins:{legend:{display:false}}, scales:{ x:{ grid:{color:COLORS.line}, ticks:{stepSize:1} }, y:{ grid:{display:false} } } }
+  });
+}
+
+/* ==================== DIRECTORY ==================== */
+function renderDirectory(){
+  const search = document.getElementById('dirSearch').value.trim().toLowerCase();
+  const deptFilter = document.getElementById('dirDeptFilter').value;
+  const resultFilter = document.getElementById('dirResultFilter').value;
+
+  let rows = ALL;
+  if(deptFilter !== 'all') rows = rows.filter(r => r.deptId === deptFilter);
+  if(resultFilter !== 'all') rows = rows.filter(r => r.result === resultFilter);
+  if(search) rows = rows.filter(r => r.id.toLowerCase().includes(search) || (r.first+' '+r.last).toLowerCase().includes(search));
+
+  document.getElementById('dirCount').textContent = `${rows.length} of ${ALL.length}`;
+
+  const thead = document.querySelector('#dirTable thead');
+  const tbody = document.querySelector('#dirTable tbody');
+  thead.innerHTML = '<tr><th>Student ID</th><th>Name</th><th>Dept</th><th class="num">Sem</th><th class="num">Total Marks</th><th>Grade</th><th>Result</th><th class="num">CGPA</th><th class="num">Absences</th></tr>';
+  tbody.innerHTML = rows.slice(0,200).map(r => `<tr>
+      <td>${r.id}</td><td>${r.first} ${r.last}</td><td>${deptName(r.deptId)}</td><td class="num">${r.semester}</td>
+      <td class="num">${r.totalMarks}</td><td><span class="grade-pill ${gradeClass(r.grade)}">${r.grade}</span></td>
+      <td class="${r.result==='Pass'?'result-pass':'result-fail'}">${r.result}</td><td class="num">${r.cgpa}</td><td class="num">${r.absences}</td>
+    </tr>`).join('');
+  if(rows.length > 200){
+    tbody.innerHTML += `<tr><td colspan="9" style="text-align:center;color:var(--muted);font-size:12px;">Showing first 200 of ${rows.length} matching students — refine your search or filters to see more.</td></tr>`;
+  }
+}
+
+/* ==================== INIT ==================== */
+fillDeptSelects();
+document.getElementById('deptSelect').addEventListener('change', renderDepartment);
+document.getElementById('courseDeptFilter').addEventListener('change', renderCourses);
+document.getElementById('dirSearch').addEventListener('input', renderDirectory);
+document.getElementById('dirDeptFilter').addEventListener('change', renderDirectory);
+document.getElementById('dirResultFilter').addEventListener('change', renderDirectory);
+
+renderOverview();
+renderDepartment();
+renderGrades();
+renderRisk();
+renderCourses();
+renderDirectory();
+
+</script>
+</body>
+</html>
